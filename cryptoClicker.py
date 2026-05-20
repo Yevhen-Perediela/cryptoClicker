@@ -5,7 +5,7 @@ ctk.set_appearance_mode("dark")
 
 root = ctk.CTk()
 root.title("Crypto Clicker TEB")
-root.geometry("600x600")
+root.geometry("600x700")
 root.resizable(False, False)
 root.configure(fg_color="#1e1e1e")
 
@@ -17,11 +17,71 @@ coinsLabel = ctk.CTkLabel(root, text="TebCoin balance: 0", corner_radius=15, fon
 coinsLabel.pack(pady=10)
 
 value = 0
+coins_per_click = 1
+auto_coins = 0
+bonus = 1
+
+click_upgrade_price = 10
+auto_upgrade_price = 25
+bonus_upgrade_price = 50
+
+infoLabel = ctk.CTkLabel(root, text="Per click: 1 | Auto: 0 | Bonus: x1", font=("Arial", 14), text_color="white")
+infoLabel.pack(pady=(0, 5))
+
+messageLabel = ctk.CTkLabel(root, text="", font=("Arial", 13), text_color="#f9fe00")
+messageLabel.pack(pady=(0, 5))
+
+def update_labels():
+    coinsLabel.configure(text=f"TebCoin balance: {value}")
+    infoLabel.configure(text=f"Per click: {coins_per_click * bonus} | Auto: {auto_coins * bonus} | Bonus: x{bonus}")
+    clickButton.configure(text=f"+1 per click\nPrice: {click_upgrade_price}")
+    autoButton.configure(text=f"+1 auto\nPrice: {auto_upgrade_price}")
+    bonusButton.configure(text=f"Bonus x2\nPrice: {bonus_upgrade_price}")
 
 def add_coin():
     global value
-    value += 1
-    coinsLabel.configure(text=f"TebCoin balance: {value}")
+    value += coins_per_click * bonus
+    update_labels()
+
+def buy_click_upgrade():
+    global value, coins_per_click, click_upgrade_price
+    if value >= click_upgrade_price:
+        value -= click_upgrade_price
+        coins_per_click += 1
+        click_upgrade_price += 15
+        messageLabel.configure(text="Click upgrade bought!")
+    else:
+        messageLabel.configure(text="Not enough TebCoin")
+    update_labels()
+
+def buy_auto_upgrade():
+    global value, auto_coins, auto_upgrade_price
+    if value >= auto_upgrade_price:
+        value -= auto_upgrade_price
+        auto_coins += 1
+        auto_upgrade_price += 30
+        messageLabel.configure(text="Auto income bought!")
+    else:
+        messageLabel.configure(text="Not enough TebCoin")
+    update_labels()
+
+def buy_bonus_upgrade():
+    global value, bonus, bonus_upgrade_price
+    if value >= bonus_upgrade_price:
+        value -= bonus_upgrade_price
+        bonus *= 2
+        bonus_upgrade_price *= 2
+        messageLabel.configure(text="Bonus bought!")
+    else:
+        messageLabel.configure(text="Not enough TebCoin")
+    update_labels()
+
+def add_auto_coins():
+    global value
+    if auto_coins > 0:
+        value += auto_coins * bonus
+        update_labels()
+    root.after(1000, add_auto_coins)
 
 coin_canvas = tk.Canvas(
     root,
@@ -48,5 +108,19 @@ coin_text = coin_canvas.create_text(
 coin_canvas.tag_bind(coin_circle, "<Button-1>", lambda event: add_coin())
 coin_canvas.tag_bind(coin_text, "<Button-1>", lambda event: add_coin())
 
+upgradesFrame = ctk.CTkFrame(root, fg_color="transparent")
+upgradesFrame.pack(side="bottom", pady=25)
+
+clickButton = ctk.CTkButton(upgradesFrame, text="", width=160, height=55, command=buy_click_upgrade)
+clickButton.grid(row=0, column=0, padx=8)
+
+autoButton = ctk.CTkButton(upgradesFrame, text="", width=160, height=55, command=buy_auto_upgrade)
+autoButton.grid(row=0, column=1, padx=8)
+
+bonusButton = ctk.CTkButton(upgradesFrame, text="", width=160, height=55, command=buy_bonus_upgrade)
+bonusButton.grid(row=0, column=2, padx=8)
+
+update_labels()
+add_auto_coins()
 
 root.mainloop()
