@@ -1,84 +1,79 @@
 import customtkinter as ctk
 import tkinter as tk
-
-ctk.set_appearance_mode("dark")
+import math
 
 root = ctk.CTk()
 root.title("Crypto Clicker TEB")
 root.geometry("600x600")
 root.resizable(False, False)
-root.configure(fg_color="#1e1e1e")
-
-
-header = ctk.CTkLabel(root, text="Crypto Clicker", font=("Arial", 28, "bold"), text_color="white", fg_color="transparent")
-header.pack(pady=(20, 10))
-
-coinsLabel = ctk.CTkLabel(root, text="TebCoin balance: 0", corner_radius=15, font=("Arial", 16, "bold"), text_color="#1e1e1e", fg_color="#ffffff", width=240, height=45)
-coinsLabel.pack(pady=10)
+bg_canvas = tk.Canvas(root, width=600, height=600, bg="#005b96", highlightthickness=0)
+bg_canvas.place(x=0, y=0)
 
 value = 0
-animating = False
+mouse_x, mouse_y = 300, 300
+coin_scale = 1.0
+target_scale = 1.0
 
-def add_coin():
-    global value
-    value += 1
-    coinsLabel.configure(text=f"TebCoin balance: {value}")
+def on_mouse_move(event):
+    global mouse_x, mouse_y
+    mouse_x, mouse_y = event.x, event.y
 
-def animate_grow(step=0):
-    global animating
-    animating = True
-    if step < 10:
-        x1 = 10 - step
-        y1 = 10 - step
-        x2 = 250 + step
-        y2 = 250 + step
-        coin_canvas.coords(coin_circle, x1, y1, x2, y2)
-        root.after(20, lambda: animate_grow(step + 1))
-    else:
-        animating = False
+def on_press(event):
+    global target_scale, value
+    dist = math.sqrt((event.x - 300)**2 + (event.y - 310)**2)
+    if dist < 95 * coin_scale:
+        target_scale = 0.88
+        value += 1
 
-def animate_shrink(step=0):
-    global animating
-    animating = True
-    if step < 10:
-        x1 = 10 - (10 - step)
-        y1 = 10 - (10 - step)
-        x2 = 250 + (10 - step)
-        y2 = 250 + (10 - step)
-        coin_canvas.coords(coin_circle, x1, y1, x2, y2)
-        root.after(20, lambda: animate_shrink(step + 1))
-    else:
-        coin_canvas.coords(coin_circle, 10, 10, 250, 250)
-        animating = False
+def on_release(event):
+    global target_scale
+    target_scale = 1.0
 
-coin_canvas = tk.Canvas(
-    root,
-    width=270,
-    height=270,
-    bg="#1e1e1e",
-    highlightthickness=0
-)
-coin_canvas.pack(pady=25)
+bg_canvas.bind("<Motion>", on_mouse_move)
+bg_canvas.bind("<ButtonPress-1>", on_press)
+bg_canvas.bind("<ButtonRelease-1>", on_release)
 
-coin_circle = coin_canvas.create_oval(
-    10, 10, 250, 250,
-    fill="#f9fe00",
-    outline=""
-)
+def update_loop():
+    global coin_scale
+    coin_scale += (target_scale - coin_scale) * 0.22
+    
+    dx = (mouse_x - 300) / 10.0
+    dy = (mouse_y - 300) / 10.0
+    
+    bg_canvas.delete("all")
+    
+    sky_colors = ["#005b96", "#006aa6", "#007ab7", "#008bc9", "#009bdb", "#00aded", "#1cb7ff", "#3ec1ff", "#60cbff", "#82d5ff"]
+    for idx, color in enumerate(sky_colors):
+        bg_canvas.create_rectangle(0, idx * 50, 600, (idx + 1) * 50, fill=color, outline="")
+        
+    sun_x, sun_y = 440 - dx * 0.5, 280 - dy * 0.5
+    bg_canvas.create_oval(sun_x - 35, sun_y - 35, sun_x + 35, sun_y + 35, fill="#ffd56b", outline="#ffa500", width=2)
+    
+    m_pts = [(-100, 800), (-100, 360), (100, 300), (250, 400), (400, 270), (700, 380), (700, 800)]
+    shifted_m = [(x - dx * 1.5, y - dy * 1.5) for x, y in m_pts]
+    bg_canvas.create_polygon(shifted_m, fill="#325d79", outline="")
+    
+    h_pts = [(-150, 800), (-150, 440), (200, 390), (450, 450), (750, 400), (750, 800)]
+    shifted_h = [(x - dx * 3.0, y - dy * 3.0) for x, y in h_pts]
+    bg_canvas.create_polygon(shifted_h, fill="#489a51", outline="")
+    
+    f_pts = [(-200, 900), (-200, 520), (300, 480), (800, 540), (800, 900)]
+    shifted_f = [(x - dx * 5.0, y - dy * 5.0) for x, y in f_pts]
+    bg_canvas.create_polygon(shifted_f, fill="#55a630", outline="")
+    
+    bg_canvas.create_text(302, 52, text="Crypto Clicker", font=("Georgia", 28, "bold"), fill="#1a2d3c")
+    bg_canvas.create_text(300, 50, text="Crypto Clicker", font=("Georgia", 28, "bold"), fill="#ffffff")
+    
+    bg_canvas.create_rectangle(180, 90, 420, 135, fill="#3d2616", outline="#ffd700", width=2)
+    bg_canvas.create_text(300, 112, text=f"TebCoin balance: {value}", font=("Georgia", 14, "bold"), fill="#ffffff")
+    
+    s_rad = 95 * coin_scale
+    bg_canvas.create_oval(300 - s_rad, 310 - s_rad, 300 + s_rad, 310 + s_rad, fill="#7d848c", outline="#2c3035", width=2)
+    bg_canvas.create_oval(300 - s_rad*0.88, 310 - s_rad*0.88, 300 + s_rad*0.88, 310 + s_rad*0.88, fill="#b25d1f", outline="#402008", width=2)
+    bg_canvas.create_oval(300 - s_rad*0.32, 310 - s_rad*0.32, 300 + s_rad*0.32, 310 + s_rad*0.32, fill="#9ea5ad", outline="#202224", width=2)
+    bg_canvas.create_text(300, 310, text="T", font=("Georgia", max(8, int(20 * coin_scale)), "bold"), fill="#202224")
+    
+    root.after(20, update_loop)
 
-coin_text = coin_canvas.create_text(
-    130, 130,
-    text="TEBCOIN",
-    fill="black",
-    font=("Arial", 25, "bold")
-)
-
-coin_canvas.tag_bind(coin_circle, "<Button-1>", lambda event: add_coin())
-coin_canvas.tag_bind(coin_text, "<Button-1>", lambda event: add_coin())
-coin_canvas.tag_bind(coin_circle, "<ButtonPress-1>", lambda event: animate_grow())
-coin_canvas.tag_bind(coin_text, "<ButtonPress-1>", lambda event: animate_grow())
-coin_canvas.tag_bind(coin_circle, "<ButtonRelease-1>", lambda event: animate_shrink())
-coin_canvas.tag_bind(coin_text, "<ButtonRelease-1>", lambda event: animate_shrink())
-
-
+update_loop()
 root.mainloop()
