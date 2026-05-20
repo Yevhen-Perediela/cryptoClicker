@@ -17,17 +17,39 @@ coinsLabel = ctk.CTkLabel(root, text="TebCoin balance: 0", corner_radius=15, fon
 coinsLabel.pack(pady=10)
 
 value = 0
+animating = False
 
 def add_coin():
     global value
     value += 1
     coinsLabel.configure(text=f"TebCoin balance: {value}")
 
-def grow_coin(event):
-    coin_canvas.coords(coin_circle, 0, 0, 260, 260)
+def animate_grow(step=0):
+    global animating
+    animating = True
+    if step < 10:
+        x1 = 10 - step
+        y1 = 10 - step
+        x2 = 250 + step
+        y2 = 250 + step
+        coin_canvas.coords(coin_circle, x1, y1, x2, y2)
+        root.after(20, lambda: animate_grow(step + 1))
+    else:
+        animating = False
 
-def shrink_coin(event):
-    coin_canvas.coords(coin_circle, 10, 10, 250, 250)
+def animate_shrink(step=0):
+    global animating
+    animating = True
+    if step < 10:
+        x1 = 10 - (10 - step)
+        y1 = 10 - (10 - step)
+        x2 = 250 + (10 - step)
+        y2 = 250 + (10 - step)
+        coin_canvas.coords(coin_circle, x1, y1, x2, y2)
+        root.after(20, lambda: animate_shrink(step + 1))
+    else:
+        coin_canvas.coords(coin_circle, 10, 10, 250, 250)
+        animating = False
 
 coin_canvas = tk.Canvas(
     root,
@@ -53,10 +75,10 @@ coin_text = coin_canvas.create_text(
 
 coin_canvas.tag_bind(coin_circle, "<Button-1>", lambda event: add_coin())
 coin_canvas.tag_bind(coin_text, "<Button-1>", lambda event: add_coin())
-coin_canvas.tag_bind(coin_circle, "<ButtonPress-1>", grow_coin)
-coin_canvas.tag_bind(coin_text, "<ButtonPress-1>", grow_coin)
-coin_canvas.tag_bind(coin_circle, "<ButtonRelease-1>", shrink_coin)
-coin_canvas.tag_bind(coin_text, "<ButtonRelease-1>", shrink_coin)
+coin_canvas.tag_bind(coin_circle, "<ButtonPress-1>", lambda event: animate_grow())
+coin_canvas.tag_bind(coin_text, "<ButtonPress-1>", lambda event: animate_grow())
+coin_canvas.tag_bind(coin_circle, "<ButtonRelease-1>", lambda event: animate_shrink())
+coin_canvas.tag_bind(coin_text, "<ButtonRelease-1>", lambda event: animate_shrink())
 
 
 root.mainloop()
