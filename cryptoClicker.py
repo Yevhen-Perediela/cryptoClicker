@@ -6,11 +6,13 @@ root = ctk.CTk()
 root.title("Crypto Clicker TEB")
 root.geometry("600x700")
 root.resizable(False, False)
+
+# Main Canvas
 bg_canvas = tk.Canvas(root, width=600, height=600, bg="#005b96", highlightthickness=0)
 bg_canvas.place(x=0, y=0)
 
+# Game state
 value = 0
-animating = False
 coins_per_click = 1
 auto_coins = 0
 bonus = 1
@@ -19,18 +21,20 @@ click_upgrade_price = 10
 auto_upgrade_price = 25
 bonus_upgrade_price = 50
 
-infoLabel = ctk.CTkLabel(root, text="Per click: 1 | Auto: 0 | Bonus: x1", font=("Arial", 14), text_color="white")
-infoLabel.pack(pady=(0, 5))
+message_text = ""
+message_timer = 0
 
-messageLabel = ctk.CTkLabel(root, text="", font=("Arial", 13), text_color="#f9fe00")
-messageLabel.pack(pady=(0, 5))
+def set_message(text):
+    global message_text, message_timer
+    message_text = text
+    message_timer = 100  # Show for 2 seconds (100 frames * 20ms)
 
 def update_labels():
-    coinsLabel.configure(text=f"TebCoin balance: {value}")
-    infoLabel.configure(text=f"Per click: {coins_per_click * bonus} | Auto: {auto_coins * bonus} | Bonus: x{bonus}")
     clickButton.configure(text=f"+1 per click\nPrice: {click_upgrade_price}")
     autoButton.configure(text=f"+1 auto\nPrice: {auto_upgrade_price}")
     bonusButton.configure(text=f"Bonus x2\nPrice: {bonus_upgrade_price}")
+
+# Input tracking
 mouse_x, mouse_y = 300, 300
 coin_scale = 1.0
 target_scale = 1.0
@@ -42,7 +46,6 @@ def on_mouse_move(event):
 def add_coin():
     global value
     value += coins_per_click * bonus
-    update_labels()
 
 def buy_click_upgrade():
     global value, coins_per_click, click_upgrade_price
@@ -50,9 +53,9 @@ def buy_click_upgrade():
         value -= click_upgrade_price
         coins_per_click += 1
         click_upgrade_price += 15
-        messageLabel.configure(text="Click upgrade bought!")
+        set_message("Click upgrade bought!")
     else:
-        messageLabel.configure(text="Not enough TebCoin")
+        set_message("Not enough TebCoin")
     update_labels()
 
 def buy_auto_upgrade():
@@ -61,9 +64,9 @@ def buy_auto_upgrade():
         value -= auto_upgrade_price
         auto_coins += 1
         auto_upgrade_price += 30
-        messageLabel.configure(text="Auto income bought!")
+        set_message("Auto income bought!")
     else:
-        messageLabel.configure(text="Not enough TebCoin")
+        set_message("Not enough TebCoin")
     update_labels()
 
 def buy_bonus_upgrade():
@@ -72,23 +75,23 @@ def buy_bonus_upgrade():
         value -= bonus_upgrade_price
         bonus *= 2
         bonus_upgrade_price *= 2
-        messageLabel.configure(text="Bonus bought!")
+        set_message("Bonus bought!")
     else:
-        messageLabel.configure(text="Not enough TebCoin")
+        set_message("Not enough TebCoin")
     update_labels()
 
 def add_auto_coins():
     global value
     if auto_coins > 0:
         value += auto_coins * bonus
-        update_labels()
     root.after(1000, add_auto_coins)
+
 def on_press(event):
-    global target_scale, value
+    global target_scale
     dist = math.sqrt((event.x - 300)**2 + (event.y - 310)**2)
     if dist < 95 * coin_scale:
         target_scale = 0.88
-        value += 1
+        add_coin()
 
 def on_release(event):
     global target_scale
@@ -98,62 +101,7 @@ bg_canvas.bind("<Motion>", on_mouse_move)
 bg_canvas.bind("<ButtonPress-1>", on_press)
 bg_canvas.bind("<ButtonRelease-1>", on_release)
 
-def animate_grow(step=0):
-    global animating
-    animating = True
-    if step < 10:
-        x1 = 10 - step
-        y1 = 10 - step
-        x2 = 250 + step
-        y2 = 250 + step
-        coin_canvas.coords(coin_circle, x1, y1, x2, y2)
-        root.after(20, lambda: animate_grow(step + 1))
-    else:
-        animating = False
-
-def animate_shrink(step=0):
-    global animating
-    animating = True
-    if step < 10:
-        x1 = 10 - (10 - step)
-        y1 = 10 - (10 - step)
-        x2 = 250 + (10 - step)
-        y2 = 250 + (10 - step)
-        coin_canvas.coords(coin_circle, x1, y1, x2, y2)
-        root.after(20, lambda: animate_shrink(step + 1))
-    else:
-        coin_canvas.coords(coin_circle, 10, 10, 250, 250)
-        animating = False
-
-coin_canvas = tk.Canvas(
-    root,
-    width=270,
-    height=270,
-    bg="#1e1e1e",
-    highlightthickness=0
-)
-coin_canvas.pack(pady=25)
-
-coin_circle = coin_canvas.create_oval(
-    10, 10, 250, 250,
-    fill="#f9fe00",
-    outline=""
-)
-
-coin_text = coin_canvas.create_text(
-    130, 130,
-    text="TEBCOIN",
-    fill="black",
-    font=("Arial", 25, "bold")
-)
-
-coin_canvas.tag_bind(coin_circle, "<Button-1>", lambda event: add_coin())
-coin_canvas.tag_bind(coin_text, "<Button-1>", lambda event: add_coin())
-coin_canvas.tag_bind(coin_circle, "<ButtonPress-1>", lambda event: animate_grow())
-coin_canvas.tag_bind(coin_text, "<ButtonPress-1>", lambda event: animate_grow())
-coin_canvas.tag_bind(coin_circle, "<ButtonRelease-1>", lambda event: animate_shrink())
-coin_canvas.tag_bind(coin_text, "<ButtonRelease-1>", lambda event: animate_shrink())
-
+# Upgrades Frame
 upgradesFrame = ctk.CTkFrame(root, fg_color="transparent")
 upgradesFrame.pack(side="bottom", pady=25)
 
@@ -170,39 +118,61 @@ update_labels()
 add_auto_coins()
 
 def update_loop():
-    global coin_scale
+    global coin_scale, message_timer, message_text
     coin_scale += (target_scale - coin_scale) * 0.22
     
+    # Calculate simple offset offsets directly
     dx = (mouse_x - 300) / 10.0
     dy = (mouse_y - 300) / 10.0
     
+    # Message timer
+    if message_timer > 0:
+        message_timer -= 1
+        if message_timer == 0:
+            message_text = ""
+            
     bg_canvas.delete("all")
     
+    # Day time sky bands (Clear blue gradient)
     sky_colors = ["#005b96", "#006aa6", "#007ab7", "#008bc9", "#009bdb", "#00aded", "#1cb7ff", "#3ec1ff", "#60cbff", "#82d5ff"]
     for idx, color in enumerate(sky_colors):
         bg_canvas.create_rectangle(0, idx * 50, 600, (idx + 1) * 50, fill=color, outline="")
         
+    # Vibrant Yellow Sun (Depth 0.05)
     sun_x, sun_y = 440 - dx * 0.5, 280 - dy * 0.5
     bg_canvas.create_oval(sun_x - 35, sun_y - 35, sun_x + 35, sun_y + 35, fill="#ffd56b", outline="#ffa500", width=2)
     
+    # Distant Mountain (Depth 0.15, Vibrant Slate Blue)
     m_pts = [(-100, 800), (-100, 360), (100, 300), (250, 400), (400, 270), (700, 380), (700, 800)]
     shifted_m = [(x - dx * 1.5, y - dy * 1.5) for x, y in m_pts]
     bg_canvas.create_polygon(shifted_m, fill="#325d79", outline="")
     
+    # Midground Hills (Depth 0.3, Vibrant Forest Green)
     h_pts = [(-150, 800), (-150, 440), (200, 390), (450, 450), (750, 400), (750, 800)]
     shifted_h = [(x - dx * 3.0, y - dy * 3.0) for x, y in h_pts]
     bg_canvas.create_polygon(shifted_h, fill="#489a51", outline="")
     
+    # Foreground Slope (Depth 0.5, Vibrant Grass Green)
     f_pts = [(-200, 900), (-200, 520), (300, 480), (800, 540), (800, 900)]
     shifted_f = [(x - dx * 5.0, y - dy * 5.0) for x, y in f_pts]
     bg_canvas.create_polygon(shifted_f, fill="#55a630", outline="")
     
+    # UI Texts
     bg_canvas.create_text(302, 52, text="Crypto Clicker", font=("Georgia", 28, "bold"), fill="#1a2d3c")
     bg_canvas.create_text(300, 50, text="Crypto Clicker", font=("Georgia", 28, "bold"), fill="#ffffff")
     
+    # Balance Display
     bg_canvas.create_rectangle(180, 90, 420, 135, fill="#3d2616", outline="#ffd700", width=2)
     bg_canvas.create_text(300, 112, text=f"TebCoin balance: {value}", font=("Georgia", 14, "bold"), fill="#ffffff")
     
+    # Game Info (Per click / Auto / Bonus stats)
+    bg_canvas.create_text(300, 150, text=f"Per click: {coins_per_click * bonus} | Auto: {auto_coins * bonus} | Bonus: x{bonus}", font=("Georgia", 11, "bold"), fill="#ffffff")
+    
+    # Dynamic Upgrade Feedback Message
+    if message_text:
+        bg_canvas.create_text(300, 175, text=message_text, font=("Georgia", 12, "bold"), fill="#f9fe00")
+        
+    # Wooden Shield Button
     s_rad = 95 * coin_scale
     bg_canvas.create_oval(300 - s_rad, 310 - s_rad, 300 + s_rad, 310 + s_rad, fill="#7d848c", outline="#2c3035", width=2)
     bg_canvas.create_oval(300 - s_rad*0.88, 310 - s_rad*0.88, 300 + s_rad*0.88, 310 + s_rad*0.88, fill="#b25d1f", outline="#402008", width=2)
