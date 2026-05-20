@@ -23,6 +23,12 @@ def add_coin():
     value += 1
     coinsLabel.configure(text=f"TebCoin balance: {value}")
 
+def grow_coin(event):
+    coin_canvas.coords(coin_circle, 0, 0, 260, 260)
+
+def shrink_coin(event):
+    coin_canvas.coords(coin_circle, 10, 10, 250, 250)
+
 coin_canvas = tk.Canvas(
     root,
     width=270,
@@ -47,6 +53,10 @@ coin_text = coin_canvas.create_text(
 
 coin_canvas.tag_bind(coin_circle, "<Button-1>", lambda event: add_coin())
 coin_canvas.tag_bind(coin_text, "<Button-1>", lambda event: add_coin())
+coin_canvas.tag_bind(coin_circle, "<ButtonPress-1>", grow_coin)
+coin_canvas.tag_bind(coin_text, "<ButtonPress-1>", grow_coin)
+coin_canvas.tag_bind(coin_circle, "<ButtonRelease-1>", shrink_coin)
+coin_canvas.tag_bind(coin_text, "<ButtonRelease-1>", shrink_coin)
 
 
 root.mainloop()
