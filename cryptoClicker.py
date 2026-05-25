@@ -1,13 +1,16 @@
 import customtkinter as ctk
 import tkinter as tk
 import math
+import random
 
 root = ctk.CTk()
 root.title("Crypto Clicker TEB")
+root.geometry("600{text:}")
 root.geometry("600x700")
 root.resizable(False, False)
 bg_canvas = tk.Canvas(root, width=600, height=600, bg="#005b96", highlightthickness=0)
 bg_canvas.place(x=0, y=0)
+
 value = 0
 coins_per_click = 1
 auto_coins = 0
@@ -20,6 +23,21 @@ bonus_upgrade_price = 50
 message_text = ""
 message_timer = 0
 
+falling_bonus = {
+    "x": 0,
+    "y": -50,
+    "speed": 3,
+    "radius": 20,
+    "active": False,
+    "multiplier": 1.0
+}
+
+time_bonus = {
+    "active": False,
+    "multiplier": 1.0,
+    "timer": 0 
+}
+
 def set_message(text):
     global message_text, message_timer
     message_text = text
@@ -29,6 +47,7 @@ def update_labels():
     clickButton.configure(text=f"+1 per click\nPrice: {click_upgrade_price}")
     autoButton.configure(text=f"+1 auto\nPrice: {auto_upgrade_price}")
     bonusButton.configure(text=f"Bonus x2\nPrice: {bonus_upgrade_price}")
+
 mouse_x, mouse_y = 300, 300
 coin_scale = 1.0
 target_scale = 1.0
@@ -39,7 +58,9 @@ def on_mouse_move(event):
 
 def add_coin():
     global value
-    value += coins_per_click * bonus
+    # Uwzględniamy dodatkowy bonus czasowy (jeśli jest aktywny)
+    current_time_bonus = time_bonus["multiplier"] if time_bonus["active"] else 1.0
+    value += math.floor(coins_per_click * bonus * current_time_bonus)
 
 def buy_click_upgrade():
     global value, coins_per_click, click_upgrade_price
@@ -77,11 +98,26 @@ def buy_bonus_upgrade():
 def add_auto_coins():
     global value
     if auto_coins > 0:
-        value += auto_coins * bonus
+        current_time_bonus = time_bonus["multiplier"] if time_bonus["active"] else 1.0
+        value += math.floor(auto_coins * bonus * current_time_bonus)
     root.after(1000, add_auto_coins)
 
 def on_press(event):
-    global target_scale
+    global target_scale, value
+    
+    if falling_bonus["active"]:
+        dist_to_bonus = math.sqrt((event.x - falling_bonus["x"])**2 + (event.y - falling_bonus["y"])**2)
+        if dist_to_bonus < falling_bonus["radius"] + 10:
+            falling_bonus["active"] = False
+            falling_bonus["y"] = -50
+            
+            random_gain = random.randint(30, 50)
+            time_bonus["active"] = True
+            time_bonus["multiplier"] = 1.0 + (random_gain / 100.0)
+            time_bonus["timer"] = 500  # 500 klatek * 20ms = 10 sekund
+            set_message(f"SUPER BONUS! +{random_gain}% na 10s!")
+            return
+
     dist = math.sqrt((event.x - 300)**2 + (event.y - 310)**2)
     if dist < 95 * coin_scale:
         target_scale = 0.88
@@ -94,6 +130,7 @@ def on_release(event):
 bg_canvas.bind("<Motion>", on_mouse_move)
 bg_canvas.bind("<ButtonPress-1>", on_press)
 bg_canvas.bind("<ButtonRelease-1>", on_release)
+
 upgradesFrame = ctk.CTkFrame(root, fg_color="transparent")
 upgradesFrame.pack(side="bottom", pady=25)
 
@@ -110,7 +147,7 @@ update_labels()
 add_auto_coins()
 
 def update_loop():
-    global coin_scale, message_timer, message_text
+    global coin_scale, message_timer, message_text, value
     coin_scale += (target_scale - coin_scale) * 0.22
     
     dx = (mouse_x - 300) / 10.0
@@ -148,11 +185,39 @@ def update_loop():
     bg_canvas.create_rectangle(180, 90, 420, 135, fill="#3d2616", outline="#ffd700", width=2)
     bg_canvas.create_text(300, 112, text=f"TebCoin balance: {value}", font=("Georgia", 14, "bold"), fill="#ffffff")
     
-    bg_canvas.create_text(300, 150, text=f"Per click: {coins_per_click * bonus} | Auto: {auto_coins * bonus} | Bonus: x{bonus}", font=("Georgia", 11, "bold"), fill="#ffffff")
+    curr_mult = bonus * (time_bonus["multiplier"] if time_bonus["active"] else 1.0)
+    bg_canvas.create_text(300, 150, text=f"Per click: {math.floor(coins_per_click * curr_mult)} | Auto: {math.floor(auto_coins * curr_mult)} | Bonus: x{curr_mult:.1f}", font=("Georgia", 11, "bold"), fill="#ffffff")
     
     if message_text:
         bg_canvas.create_text(300, 175, text=message_text, font=("Georgia", 12, "bold"), fill="#f9fe00")
+
+    if time_bonus["active"]:
+        time_bonus["timer"] -= 1
+        seconds_left = math.ceil(time_bonus["timer"] / 50)
+        bg_canvas.create_text(300, 200, text=f"Złoty bonus aktywny jeszcze: {seconds_left}s", font=("Georgia", 12, "italic"), fill="#00ffcc")
+        if time_bonus["timer"] <= 0:
+            time_bonus["active"] = False
+            set_message("Bonus czasowy się skończył")
+
+    if not falling_bonus["active"] and random.randint(1, 300) == 1:
+        falling_bonus["active"] = True
+        falling_bonus["x"] = random.randint(50, 550)
+        falling_bonus["y"] = -30
+        falling_bonus["speed"] = random.randint(3, 6)
+
+    if falling_bonus["active"]:
+        falling_bonus["y"] += falling_bonus["speed"]
         
+        bx, by, br = falling_bonus["x"], falling_bonus["y"], falling_bonus["radius"]
+        bg_canvas.create_oval(bx - br, by - br, bx + br, by + br, fill="#ffd700", outline="#fff", width=2)
+        bg_canvas.create_text(bx, by, text="⭐", font=("Georgia", 14, "bold"), fill="#3d2616")
+        
+        if falling_bonus["y"] > 600:
+            falling_bonus["active"] = False
+            penalty = math.floor(value * 0.75)
+            value -= penalty
+            set_message(f"Za późno! Straciłeś 75% monet (-{penalty})")
+
     s_rad = 95 * coin_scale
     bg_canvas.create_oval(300 - s_rad, 310 - s_rad, 300 + s_rad, 310 + s_rad, fill="#7d848c", outline="#2c3035", width=2)
     bg_canvas.create_oval(300 - s_rad*0.88, 310 - s_rad*0.88, 300 + s_rad*0.88, 310 + s_rad*0.88, fill="#b25d1f", outline="#402008", width=2)
