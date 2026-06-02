@@ -3,9 +3,9 @@ import tkinter as tk
 import math
 import os
 import random
-import shutil
 import subprocess
 import time
+from PIL import Image, ImageTk
 
 root = ctk.CTk()
 root.title("Crypto Clicker TEB")
@@ -36,6 +36,15 @@ stats = {
     "bonuses_missed": 0
 }
 
+falling_photos = []
+photo_frames = []
+game_folder = os.path.dirname(os.path.abspath(__file__))
+music_file = os.path.join(game_folder, "DJ-Hazel- legenda o _óBtym serze (extended mix).mp3")
+image_files = [
+    os.path.join(game_folder, "images.jpeg"),
+    os.path.join(game_folder, "png-clipart-cheese-cheese.png")
+]
+
 
 class SoundManager:
     def __init__(self, tk_root):
@@ -43,14 +52,6 @@ class SoundManager:
         self.sound_enabled = True
         self.music_on = False
         self.music_process = None
-        self.game_folder = os.path.dirname(os.path.abspath(__file__))
-        self.music_file = self.find_music_file()
-
-    def find_music_file(self):
-        for file_name in os.listdir(self.game_folder):
-            if file_name.lower().endswith(".mp3"):
-                return os.path.join(self.game_folder, file_name)
-        return None
 
     def play(self, sound_name):
         if self.sound_enabled:
@@ -68,24 +69,10 @@ class SoundManager:
         update_labels()
 
     def start_music(self):
-        if not self.music_file:
-            set_message("No mp3 file found")
-            return
-
-        if shutil.which("ffplay"):
-            command = ["ffplay", "-nodisp", "-loglevel", "error", self.music_file]
-        elif shutil.which("mpv"):
-            command = ["mpv", "--no-video", "--loop=inf", self.music_file]
-        elif shutil.which("cvlc"):
-            command = ["cvlc", "--quiet", "--loop", self.music_file]
-        elif shutil.which("vlc"):
-            command = ["vlc", "--quiet", "--loop", self.music_file]
-        else:
-            set_message("Install ffmpeg/mpv/vlc for music")
-            return
-
         self.music_on = True
+        command = ["ffplay", "-nodisp", "-loglevel", "quiet", music_file]
         self.music_process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        start_photo_rain()
         self.root.after(1000, self.check_music)
 
     def check_music(self):
@@ -110,6 +97,7 @@ class SoundManager:
             self.music_process.terminate()
             self.music_process = None
         self.music_on = False
+        stop_photo_rain()
 
 
 sound_manager = SoundManager(root)
@@ -243,6 +231,54 @@ def close_game():
 
 root.protocol("WM_DELETE_WINDOW", close_game)
 
+def load_photo_frames():
+    global photo_frames
+    if photo_frames:
+        return
+
+    for path in image_files:
+        image = Image.open(path).convert("RGBA")
+        image.thumbnail((55, 55))
+        frames = []
+        for angle in range(0, 360, 30):
+            rotated = image.rotate(angle, expand=True)
+            frames.append(ImageTk.PhotoImage(rotated))
+        photo_frames.append(frames)
+
+def start_photo_rain():
+    global falling_photos
+    load_photo_frames()
+
+    falling_photos = []
+    for _ in range(22):
+        falling_photos.append({
+            "x": random.randint(0, 580),
+            "y": random.randint(-600, -20),
+            "speed": random.randint(2, 6),
+            "frame": random.randint(0, 11),
+            "image": random.randint(0, 1)
+        })
+
+def stop_photo_rain():
+    falling_photos.clear()
+
+def draw_photo_rain():
+    if not sound_manager.music_on or not photo_frames:
+        return
+
+    for photo in falling_photos:
+        photo["y"] += photo["speed"]
+        photo["frame"] = (photo["frame"] + 1) % len(photo_frames[photo["image"]])
+
+        if photo["y"] > 630:
+            photo["x"] = random.randint(0, 580)
+            photo["y"] = random.randint(-180, -30)
+            photo["speed"] = random.randint(2, 6)
+            photo["image"] = random.randint(0, 1)
+
+        image = photo_frames[photo["image"]][photo["frame"]]
+        bg_canvas.create_image(photo["x"], photo["y"], image=image)
+
 bg_canvas.bind("<Motion>", on_mouse_move)
 bg_canvas.bind("<ButtonPress-1>", on_press)
 bg_canvas.bind("<ButtonRelease-1>", on_release)
@@ -274,8 +310,6 @@ for button in (clickButton, autoButton, bonusButton, soundButton, musicButton):
         text_color="#ffffff"
     )
 
-update_labels()
-sound_manager.start_music()
 update_labels()
 add_auto_coins()
 
@@ -322,6 +356,8 @@ def update_loop():
     f_pts = [(-200, 900), (-200, 520), (300, 480), (800, 540), (800, 900)]
     shifted_f = [(x - dx * 5.0, y - dy * 5.0) for x, y in f_pts]
     bg_canvas.create_polygon(shifted_f, fill="#55a630", outline="")
+
+    draw_photo_rain()
     
     bg_canvas.create_text(302, 52, text="Crypto Clicker", font=("Georgia", 28, "bold"), fill="#1a2d3c")
     bg_canvas.create_text(300, 50, text="Crypto Clicker", font=("Georgia", 28, "bold"), fill="#ffffff")
