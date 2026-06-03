@@ -1,0 +1,28 @@
+WYMAGANIA I URUCHOMIENIE:
+1. Wymagane biblioteki Python: 
+   pip install customtkinter pillow
+2. System audio:
+   Do odtwarzania muzyki wymagany jest zainstalowany w systemie program 'ffplay' 
+   (część pakietu FFmpeg), wywoływany przez moduł subprocess.
+3. Pliki zewnętrzne (muszą znajdować się w folderze z grą):
+   - DJ-Hazel- legenda o _óBtym serze (extended mix).mp3
+   - images.jpeg
+   - png-clipart-cheese-cheese.png
+
+GŁÓWNE KOMPONENTY KODU:
+1. Klasa SoundManager:
+   Odpowiada za kontrolę dźwięków systemowych oraz asynchroniczne odtwarzanie 
+   muzyki w tle za pomocą FFmpeg. Automatycznie zapętla utwór w przypadku sukcesu.
+
+2. Pętla Główna (update_loop):
+   Wywoływana cyklicznie co 20 ms. Odpowiada za:
+   - Dynamiczne renderowanie tła na obiekcie Canvas (słońce, góry, efekt paralaksy).
+   - Animację "deszczu obrazków" (uruchamianą wraz z muzyką).
+   - Obsługę spadającego bonusu (gwiazdy) – jej złapanie daje losowy bonus 
+     procentowy, a przegapienie skutkuje karą (utrata 75% stanu konta).
+   - Odświeżanie paneli statystyk (czas gry, kliknięcia, zarobki na sekundę).
+
+3. System Ekonomii i Ulepszeń:
+   - Kupowanie zwiększenia wartości kliknięcia (buy_click_upgrade).
+   - Kupowanie automatycznego przychodu co 1 sekundę (buy_auto_upgrade).
+   - Kupowanie mnożnika x2 do wszystkich dochodów (buy_bonus_upgrade).
